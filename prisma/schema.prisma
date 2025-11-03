@@ -1,0 +1,139 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../src/generated/prisma"
+  
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model Permission {
+  id Int @default(autoincrement()) @id
+  name String @db.VarChar(50) @unique
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  roles PermissionRoles[]
+}
+
+// If you want the role is static
+// enum Role {
+//   ADMIN
+//   EDITIOR
+//   VIEWR
+// }
+
+model Role {
+  id Int @default(autoincrement()) @id
+  name String @unique @db.VarChar(50)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  permissions PermissionRoles[]
+  users User[]
+}
+
+model PermissionRoles {
+  id Int @default(autoincrement()) @id
+  role_id Int
+  permission_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  permission Permission @relation(fields: [permission_id],references: [id])
+  role Role @relation(fields: [role_id],references: [id])
+}
+
+
+model User {
+  id Int @default(autoincrement()) @id
+  name String @db.VarChar(100) 
+  email String @db.VarChar(50) @unique
+  password String
+  token String? @unique
+  role_id Int
+  // role Role @default(VIEWER)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  role Role @relation(fields: [role_id],references: [id])
+  tweets Tweet[]
+  reactions Reaction[]
+  // self-referential many to many relationship for followers and followings
+  followers Follow[] @relation("following_relation")
+  followings Follow[] @relation("follower_relation")
+  // self-referencing: user can follow another user and all of them at the same table
+}
+
+model Tweet {
+  id Int @default(autoincrement()) @id
+  tweet String
+  image String?
+  // Not all users can post tweet such as the Viewer user
+  user_id Int? 
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  // if user is deleted set user_id to null ,so tweets remain but without user
+  user User? @relation(fields: [user_id],references: [id],onDelete: SetNull)
+  tweetReactions TweetReaction[]
+}
+
+enum ReactionType {
+  LIKE
+  LOVE
+  FUNNY
+}
+
+model Reaction {
+  id Int @default(autoincrement()) @id
+  type ReactionType
+  user_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  // many to many relationship between Reaction and Tweet through TweetReaction
+  tweetReactions TweetReaction[] 
+  // one to many relationship between User and Reaction
+  user User @relation(fields: [user_id],references: [id],onDelete: Cascade)
+  // unique reaction type per user , user can have only one like or one love.. reaction on a tweet
+  @@unique([ type, user_id ])
+}
+
+
+model TweetReaction {
+  id Int @default(autoincrement()) @id
+  tweet_id Int
+  reaction_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  // many to many relationship between Tweet and Reaction
+  tweet Tweet @relation(fields: [tweet_id], references: [id],onDelete: Cascade)
+  reaction Reaction @relation(fields: [reaction_id], references: [id],onDelete: Cascade)
+}
+
+
+
+// I used a self-referential and it's many to many realation
+//  so I need to create a middle table to handle this relationship
+model Follow {
+  id Int @default(autoincrement()) @id
+  follower_id Int
+  following_id Int
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  // on delete cascade to delete the follow relationship if any user is deleted
+  follower User @relation("follower_relation", fields: [follower_id], references: [id],onDelete: Cascade)
+  following User @relation("following_relation", fields: [following_id], references: [id],onDelete: Cascade)
+  // to prevent duplicate follows , a user cannot follow the same user more than once
+  @@unique([follower_id, following_id])
+}
+
+
+
+
+
+
