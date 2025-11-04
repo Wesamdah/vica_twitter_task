@@ -43,7 +43,9 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const roles = [2, 3]; // 1: Admin 2: Editor 3: Viewer
+    console.log("tessst", role_id);
     const allowedRole = roles.includes(role_id) ? role_id : 3;
+    console.log("allowedRole", allowedRole);
 
     const user = await prisma.user.create({
       data: {
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
       id: user.id,
       name: user.name,
       email: user.email,
-      role_id: role_id,
+      role_id: user.role_id,
     };
 
     const token = generateJWT(tokenPayload);
