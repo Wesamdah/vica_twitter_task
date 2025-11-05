@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const followingUsers = await prisma.follow.findMany({
-      where: { following_id: user.id },
+      where: { follower_id: user.id },
     });
 
     if (!followingUsers.length) {
@@ -26,7 +26,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const followingUsersId = followingUsers.map((follow) => follow.follower_id);
+    // we want the IDs of users that the current user is following
+    const followingUsersId = followingUsers.map(
+      (follow) => follow.following_id
+    );
 
     const tweetsPromises = followingUsersId.map((followedUserId) =>
       prisma.tweet.findMany({
