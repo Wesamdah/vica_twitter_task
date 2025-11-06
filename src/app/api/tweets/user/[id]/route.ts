@@ -30,8 +30,16 @@ export async function GET(
 
     const userTweets = await prisma.tweet.findMany({
       where: { user_id: selectedId },
-      select: {
-        tweet: true,
+      include: {
+        tweetReactions: {
+          include: {
+            reaction: {
+              select: {
+                type: true,
+              },
+            },
+          },
+        },
       },
     });
 
